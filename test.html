@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <script src="lib/d3.v4.js"></script>
+    <script src="jkp.js"></script>
+
+    <title>JKP</title>
+
+    <script>
+
+        //jankenpon predictor.  In this case this is a simple perceptron.
+        let jk = {};
+
+        //game state
+        let t_won = 0;
+        let t_lost=0;
+        let t_drawn=0;
+        let p_throw=-1;
+        let m_throw=-1;
+        let current_outcome=-2;
+
+        //set up game with default parameters
+        setTimeout(function(){doReset(7, 0.1);},50);
+
+
+        function doResetButton(){
+            let r = document.getElementById("range_rand").value/10;
+            let d = document.getElementById("range_depth").value*1;
+            doReset(d, r);
+        }
+
+
+        function doReset(depth, randomness){
+            t_won=0;
+            t_lost=0;
+            t_drawn=0;
+            current_outcome=-2;
+            p_throw=-1;
+            m_throw=-1;
+
+            jk = new jkp.JKP(depth, randomness);
+            updateUI();
+        }
+
+        function updateUI(){
+            document.getElementById("t_won").innerText= "Won: " + t_won;
+            document.getElementById("t_lost").innerText= "Lost: " + t_lost;
+            document.getElementById("t_drawn").innerText= "Drawn: " + t_drawn;
+
+
+            let w = document.getElementById("winsign");
+            let p = document.getElementById("pthrow");
+            let m = document.getElementById("mthrow");
+
+            setTimeout(function() {
+                let p = document.getElementById("pthrow");
+                let m = document.getElementById("mthrow");
+                let w = document.getElementById("winsign");
+                p.classList.add("bouncy1");
+                m.classList.add("bouncy1");
+                w.src="rps blank.png";
+
+                switch(p_throw) {
+                    case -1:
+                        p.src = "rps waiting.png";
+                        break;
+                    case 0:
+                        p.src = "rps rock.png";
+                        break;
+                    case 1:
+                        p.src = "rps paper.png";
+                        break;
+                    case 2:
+                        p.src = "rps scissors.png";
+                        break;
+                }
+
+                switch(m_throw) {
+                    case -1:
+                        m.src = "rps waiting.png";
+                        break;
+                    case 0:
+                        m.src = "rps mrock.png";
+                        break;
+                    case 1:
+                        m.src = "rps mpaper.png";
+                        break;
+                    case 2:
+                        m.src = "rps mscissors.png";
+                        break;
+                }
+
+            }, 1);
+
+            setTimeout(function() {
+                document.getElementById("pthrow").classList.remove("bouncy1");
+                document.getElementById("mthrow").classList.remove("bouncy1");
+            }, 500);
+
+
+            setTimeout(function(){
+                let w = document.getElementById("winsign");
+                w.classList.add("bouncy1");
+
+
+                switch(current_outcome) {
+                    case 0:
+                        w.src="rps draw.png";
+                        break;
+                    case 1:
+                        w.src="rps pwon.png";
+                        break;
+                    case -1:
+                        w.src="rps plost.png";
+                        break;
+                    case -2:
+                        w.src="rps blank.png";
+                        break;
+                }
+
+            },200);
+
+            setTimeout(function() {
+                document.getElementById("winsign").classList.remove("bouncy1");
+            }, 700);
+
+        }
+
+        //handle a button click, i.e. a 'throw', by the player
+        function doThrow(t){
+
+            //record player throw and get the machine's throw
+            p_throw=t;
+            let p = jk.getPredictedThrow();
+            let r= (p+1) % 3;
+            m_throw = r;
+
+            current_outcome = decideWinner(t, r);
+
+            switch(current_outcome){
+                case -1: t_lost++;break;
+                case 1: t_won++;break;
+                case 0: t_drawn++;break;
+            }
+
+            jk.considerThrow(t);
+
+            updateUI();
+
+        }
+
+        //given a player throw and a machine throw, return how much to increment the player's score.
+        function decideWinner(p, r){
+            let d = p-r;
+            if(d===0) return 0;
+            if(d===1 || d===-2) return 1;
+            return -1;
+        }
+
+
+    </script>
+
+    <style>
+
+        #gamegrid {
+            align-items: center;
+            justify-items: center;
+            border-width:1px;
+            border-style:solid;
+            padding: 20px;
+
+        }
+
+        #controls {
+            border-width:1px;
+            border-style:solid;
+            padding:20px;
+            font-family: Tahoma, Trebuchet, Arial;
+            font-size:large;
+            margin-top:5px;
+
+        }
+
+        #reset_btn  {
+            border: 2px solid black;
+            background-color: white;
+            color: black;
+            padding: 14px 28px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: Tahoma, Trebuchet, Arial;
+            font-size:large;
+
+        }
+
+        .gametxt {
+            font-family: Tahoma, Trebuchet, Arial;
+            font-size:large;
+        }
+
+        .outtxt {
+            font-family: Tahoma, Trebuchet, Arial;
+            font-size:larger;
+            font-weight: bold;
+        }
+
+        #gamegrid div {
+
+        }
+
+        .ctl {
+            margin-right:20px;
+            white-space: nowrap;
+        }
+
+        .gamebtn {
+            width:10em;
+            height:10em;
+            outline:none;
+        }
+
+        .gamebtn:hover {
+            opacity: 80%;
+        }
+        .gamebtn:active {
+            opacity: 65%;
+        }
+
+
+        .throw {
+            width:20em;
+            height:20em;
+        }
+
+        #winsign {
+            width:12em;
+            height:12em;
+        }
+
+        .bouncy1 {
+            align-self: flex-end;
+            animation-duration: 500ms;
+            animation-iteration-count: 1;
+            background-color: #F44336;
+            margin: 0 auto 0 auto;
+            transform-origin: bottom;
+            border: none;
+
+            animation-name: bounce1;
+            animation-timing-function: cubic-bezier(0.280, 0.840, 0.420, 1);
+        }
+
+        @keyframes bounce1 {
+            0%   { transform: scale(1,1)      translateY(0); }
+            10%  { transform: scale(1,0.9)   translateY(0); }
+            35%  { transform: scale(0.9,1)   translateY(-40px); }
+            55%  { transform: scale(1,1) translateY(0); }
+            60%  { transform: scale(1,1)      translateY(-5px); }
+            75%  { transform: scale(1,1)      translateY(0); }
+            100% { transform: scale(1,1)      translateY(0); }
+        }
+
+
+    </style>
+</head>
+
+
+<body>
+
+<div style="display:flex;justify-content: space-around;flex-direction:column;text-align: center;margin:auto";>
+<div id="gamegrid" style="width:90%;display:grid;grid-template-columns: [btns] 1fr [pthrow] 1fr [center1] 1fr [center2] 1fr [mthrow] 1fr;grid-template-rows: [labels] 1fr [r] 5fr [p]5fr [s] 5fr [output]2fr">
+
+    <div style="grid-column: btns;grid-row: labels"><span class="gametxt">Pick your throw:</span></div>
+    <div style="grid-column: pthrow;grid-row: labels"><span class="gametxt">You threw:</span></div>
+    <div style="grid-column: mthrow;grid-row: labels"><span class="gametxt">Computer threw:</span></div>
+
+    <div style="grid-column: pthrow;grid-row: r / span 3"><img id="pthrow" class="throw" src="rps waiting.png"/></div>
+    <div style="grid-column: mthrow;grid-row: r / span 3"><img id="mthrow" class="throw" src="rps waiting.png"/></div>
+
+
+    <div style="grid-column: btns;grid-row: r"><input class="gamebtn" type="image" src="rps rock.png" onclick="doThrow(0)"/></div>
+    <div style="grid-column: btns;grid-row: p"><input class="gamebtn" type="image" src="rps paper.png" onclick="doThrow(1)"/></div>
+    <div style="grid-column: btns;grid-row: s"><input class="gamebtn" type="image" src="rps scissors.png" onclick="doThrow(2)"/></div>
+
+    <div style="grid-column: center1/span 2;grid-row: r / span 3" id="winsign_container"><img id="winsign" src="rps blank.png"></img></div>
+
+    <div style="grid-column: pthrow;grid-row: output"><span class="outtxt" id="t_won"></span></div>
+    <div style="grid-column: center1/span 2;grid-row: output"><span class="outtxt" id="t_lost"></span></div>
+    <div style="grid-column: mthrow;grid-row: output"><span class="outtxt" id="t_drawn"></span></div>
+</div>
+    <div id="controls" style="width:90%">
+        <span class="ctl">
+        <label for="range_depth">History depth:</label>
+        <input type="range" min="1" max="20" value="7" id="range_depth"/>
+        </span>
+        <span class="ctl">
+        <label for="range_rand">Jitter:</label>
+        <input type="range" min="0" max="5" value="1" id="range_rand"/>
+        </span>
+        <span class="ctl">
+        <input id="reset_btn" type="button" onClick="doResetButton()" value="Restart..."/>
+        </span>
+
+    </div>
+
+</div>
+
+
+
+</body>
+</html>
